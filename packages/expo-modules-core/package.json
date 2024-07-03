@@ -7,6 +7,16 @@
   "sideEffects": [
     "*.fx.ts"
   ],
+  "exports": {
+    ".": {
+      "default": "./build/index.js",
+      "types": "./build/index.d.ts"
+    },
+    "./fetch": {
+      "default": "./build/fetch/index.js",
+      "types": "./build/fetch/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "expo-module build",
     "clean": "expo-module clean",
@@ -38,7 +48,8 @@
     "preset": "expo-module-scripts"
   },
   "dependencies": {
-    "invariant": "^2.2.4"
+    "invariant": "^2.2.4",
+    "web-streams-polyfill": "^3.3.2"
   },
   "devDependencies": {
     "@testing-library/react-hooks": "^7.0.1",
