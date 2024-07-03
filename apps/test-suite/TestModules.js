@@ -73,6 +73,9 @@ export function getTestModules() {
     optionalRequire(() => require('./tests/SQLiteLegacy'))
   );
 
+  // temp: iOS only for fetch
+  modules.push(require('./tests/Fetch'));
+
   if (['android', 'ios'].includes(Platform.OS)) {
     modules.push(require('./tests/SQLite'));
   }
