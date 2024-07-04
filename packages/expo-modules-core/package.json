@@ -7,16 +7,6 @@
   "sideEffects": [
     "*.fx.ts"
   ],
-  "exports": {
-    ".": {
-      "default": "./build/index.js",
-      "types": "./build/index.d.ts"
-    },
-    "./fetch": {
-      "default": "./build/fetch/index.js",
-      "types": "./build/fetch/index.d.ts"
-    }
-  },
   "scripts": {
     "build": "expo-module build",
     "clean": "expo-module clean",
