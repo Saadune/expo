@@ -2,40 +2,72 @@
 
 package expo.modules.networkfetch
 
+import expo.modules.kotlin.records.Field
+import expo.modules.kotlin.records.Record
 import expo.modules.kotlin.sharedobjects.SharedRef
+import expo.modules.kotlin.types.Enumerable
 import okhttp3.Call
-import okhttp3.Callback
+import okhttp3.CookieJar
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
-import java.io.IOException
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URL
 
-internal class NativeRequest(client: OkHttpClient) : SharedRef<OkHttpClient>(client), Callback {
-  fun sendRequest(url: URL) {
-    val request = Request.Builder()
-      .url(url)
-      .get()
-      .build()
-    this.ref.newCall(request).enqueue(this)
-  }
+internal class NativeRequest(
+  private val defaultClient: OkHttpClient,
+  internal val response: NativeResponse
+) :
+  SharedRef<RequestHolder>(RequestHolder(null)) {
+  private var task: Call? = null
 
-  override fun onResponse(call: Call, response: Response) {
-    response.use {
-      if (!response.isSuccessful) {
-        emit("didFailWithError", "Failed request - status[${response.code}")
-        return
-      }
-      val stream = response.body?.source() ?: return
-      while (!stream.exhausted()) {
-        val byteArray = stream.buffer.readByteArray()
-        emit("didReceiveResponseData", byteArray)
-      }
-      emit("didComplete")
+  fun start(url: URL, requestInit: NativeRequestInit, requestBody: ByteArray?) {
+    val client = if (requestInit.credentials == NativeRequestCredentials.INCLUDE) {
+      defaultClient
+    } else {
+      defaultClient.newBuilder().cookieJar(CookieJar.NO_COOKIES).build()
     }
+
+    var headers = requestInit.headers.toHeaders()
+    val mediaType = headers["Content-Type"]?.toMediaTypeOrNull()
+    val shouldGzipRequestBody =
+      headers["Content-Encoding"]?.equals("gzip", ignoreCase = true) == true
+    val body: ByteArray? = if (shouldGzipRequestBody) {
+      requestBody?.toGzipByteArray()
+    } else {
+      requestBody
+    }
+    if (shouldGzipRequestBody && body != null) {
+      headers = headers.newBuilder()
+        .add("Content-Length", body.size.toString())
+        .build()
+    }
+    val request = Request.Builder()
+      .headers(headers)
+      .method(requestInit.method, body?.toRequestBody(mediaType))
+      .url(url)
+      .build()
+    this.ref.request = request
+
+    this.task = client.newCall(request)
+    this.task?.enqueue(this.response)
   }
 
-  override fun onFailure(call: Call, e: IOException) {
-    emit("didFailWithError", e.message)
+  fun cancel() {
+    this.task?.cancel()
+    response.emitRequestCancelled()
   }
 }
+
+internal data class RequestHolder(var request: Request?)
+
+internal enum class NativeRequestCredentials(val value: String) : Enumerable {
+  INCLUDE("include"),
+  OMIT("omit")
+}
+
+internal data class NativeRequestInit(
+  @Field val credentials: NativeRequestCredentials = NativeRequestCredentials.INCLUDE,
+  @Field val headers: List<Pair<String, String>> = emptyList(),
+  @Field val method: String = "GET"
+) : Record
