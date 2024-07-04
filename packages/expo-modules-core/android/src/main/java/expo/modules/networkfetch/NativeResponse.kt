@@ -36,11 +36,13 @@ internal class NativeResponse(private val coroutineScope: CoroutineScope) :
 
   fun startStreaming() {
     checkState(listOf(ResponseState.RESPONSE_RECEIVED, ResponseState.BODY_COMPLETED))
-    val queuedData = this.ref.finalize()
-    emit("didReceiveResponseData", queuedData)
     if (this.state == ResponseState.RESPONSE_RECEIVED) {
       this.state = ResponseState.BODY_STREAMING_STARTED
+      val queuedData = this.ref.finalize()
+      emit("didReceiveResponseData", queuedData)
     } else if (this.state == ResponseState.BODY_COMPLETED) {
+      val queuedData = this.ref.finalize()
+      emit("didReceiveResponseData", queuedData)
       emit("didComplete")
     }
   }
