@@ -33,10 +33,16 @@ internal final class NativeResponse: SharedRef<ResponseSink>, ExpoURLSessionDele
   }
 
   func startStreaming() {
-    checkState([.responseReceived])
-    state = .bodyStreamingStarted
-    let queuedData = self.ref.finalize()
-    emit(event: "didReceiveResponseData", arguments: queuedData)
+    checkState([.responseReceived, .bodyCompleted])
+    if state == .responseReceived {
+      state = .bodyStreamingStarted
+      let queuedData = self.ref.finalize()
+      emit(event: "didReceiveResponseData", arguments: queuedData)
+    } else if state == .bodyCompleted {
+      let queuedData = self.ref.finalize()
+      emit(event: "didReceiveResponseData", arguments: queuedData)
+      emit(event: "didComplete")
+    }
   }
 
   func cancelStreaming() {
@@ -143,24 +149,12 @@ internal final class NativeResponse: SharedRef<ResponseSink>, ExpoURLSessionDele
     if !checkState([.started, .responseReceived, .bodyStreamingStarted, .bodyStreamingCancelled]) {
       return
     }
-    switch state {
-    case .started:
-      break
-    case .responseReceived:
-      break
-    case .bodyStreamingStarted:
+    if state == .bodyStreamingStarted {
       if let error {
         emit(event: "didFailWithError", arguments: error.localizedDescription)
       } else {
         emit(event: "didComplete")
       }
-    case .bodyStreamingCancelled:
-      break
-
-    // Invalid states
-    case .intialized: break
-    case .bodyCompleted: break
-    case .errorReceived: break
     }
 
     if let error {
