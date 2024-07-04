@@ -158,7 +158,11 @@ export function test({ describe, expect, it, beforeAll, beforeEach, afterEach, .
 
   describe('Streaming', () => {
     it('should stream response', async () => {
-      const resp = await fetch('https://httpbin.org/stream-bytes/512?chunk_size=10');
+      const resp = await fetch('https://httpbin.org/drip?numbytes=512&duration=2', {
+        headers: {
+          Accept: 'text/event-stream',
+        },
+      });
       const reader = resp.body.getReader();
       const chunks = [];
       while (true) {
