@@ -1,6 +1,6 @@
 // Copyright 2015-present 650 Industries. All rights reserved.
 
-public class ExpoNetworkFetchModule: Module {
+public final class ExpoNetworkFetchModule: Module {
   private let queue = DispatchQueue(label: "expo.modules.networkfetch.RequestQueue")
 
   public func definition() -> ModuleDefinition {
