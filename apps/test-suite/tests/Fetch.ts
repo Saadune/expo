@@ -1,4 +1,5 @@
 import { fetch } from 'expo-modules-core/fetch';
+import { Platform } from 'react-native';
 
 export const name = 'Fetch';
 
@@ -68,6 +69,10 @@ export function test({ describe, expect, it, beforeAll, beforeEach, afterEach, .
     });
 
     it('should support gzip request', async () => {
+      if (Platform.OS === 'web') {
+        // gzip request is not whatwg-fetch standard and not supported in browser runtimes.
+        return;
+      }
       const body = '{"foo":"foo"}';
       const expectedBytesNumber = 29; // echo -n '{"foo":"foo"}' | gzip | wc -c
       const resp = await fetch('https://httpbin.org/anything', {
@@ -98,15 +103,27 @@ export function test({ describe, expect, it, beforeAll, beforeEach, afterEach, .
   });
 
   describe('Cookies', () => {
-    it('should include cookies when credentials are set to include (default case)', async () => {
-      await fetch('https://httpbin.org/cookies/set?foo=bar');
-      const resp = await fetch('https://httpbin.org/cookies');
+    it('should include cookies when credentials are set to include', async () => {
+      await fetch(
+        'https://httpbin.org/response-headers?Set-Cookie=foo=bar;Path=/;SameSite=None;Secure',
+        {
+          credentials: 'include',
+        }
+      );
+      const resp = await fetch('https://httpbin.org/cookies', {
+        credentials: 'include',
+      });
       const json = await resp.json();
       expect(json.cookies.foo).toBe('bar');
     });
 
     it('should not include cookies when credentials are set to omit', async () => {
-      await fetch('https://httpbin.org/cookies/set?foo=bar');
+      await fetch(
+        'https://httpbin.org/response-headers?Set-Cookie=foo=bar;Path=/;SameSite=None;Secure',
+        {
+          credentials: 'include',
+        }
+      );
       const resp = await fetch('https://httpbin.org/cookies', {
         credentials: 'omit',
       });
